@@ -1,0 +1,9 @@
+Description:           Daily Index of EDGAR Dissemination Feed by Form Type
+Last Data Received:    May 1, 2024
+
+Form Type   Company Name                CIK         Date Filed  File Name
+---------------------------------------------------------------------------------------------------
+10-K        FOO CORP                    123456      2024-05-01  edgar/data/123456/0000123456-24-000001.txt
+4           DOE JANE                    1214128     2024-05-01  edgar/data/1214128/0001214128-24-000123.txt
+4/A         AMENDED PERSON              999999      2024-05-01  edgar/data/999999/0000999999-24-000009.txt
+4           SMITH JOHN                  777777      2024-05-01  edgar/data/777777/0000777777-24-000456.txt

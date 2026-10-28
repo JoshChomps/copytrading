@@ -1,0 +1,1542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CopyTrade: disclosure copy-trading research</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --surface2: #f2f2ee;
+  --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --baseline: #c3c2b7; --ring: rgba(11,11,11,.10);
+  --s1: #2a78d6; --s2: #008300; --s3: #e87ba4; --s4: #eda100;
+  --s5: #7d5bbe; --s6: #0f9b9b; --s7: #c2410c;
+  --good: #006300; --bad: #d03b3b; --warn: #b45309;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface2: #232322;
+    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835; --ring: rgba(255,255,255,.10);
+    --s1: #3987e5; --s2: #21a121; --s3: #d55181; --s4: #c98500;
+    --s5: #9b7ada; --s6: #14b8b8; --s7: #ea580c;
+    --good: #0ca30c; --warn: #d97706;
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 24px; max-width: 1240px; margin: 0 auto;
+}
+h1 { font-size: 20px; }
+h2 { font-size: 15px; margin: 30px 0 10px; }
+h3 { font-size: 13px; margin: 16px 0 6px; color: var(--ink2); font-weight: 600; }
+.sub { color: var(--ink2); font-size: 13px; margin-top: 4px; }
+.badge { display:inline-block; font-size:11px; padding:1px 8px; border:1px solid var(--ring);
+  border-radius: 10px; color: var(--ink2); margin-left: 8px; vertical-align: 2px; }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.bad { color: var(--bad); border-color: var(--bad); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 10px; margin-top: 18px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; }
+.tile .v { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile .l { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px; margin-top: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink2); margin-bottom: 8px; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px;
+  margin-right:6px; background: var(--c); vertical-align:-1px; }
+.chartwrap { position: relative; }
+canvas { width: 100%; height: 320px; display: block; }
+canvas.short { height: 220px; }
+.tooltip { position: absolute; pointer-events: none; background: var(--surface);
+  border: 1px solid var(--ring); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.12); display: none; z-index: 5; min-width: 150px; }
+.tooltip .d { color: var(--muted); margin-bottom: 4px; }
+.tooltip .r { display:flex; justify-content:space-between; gap:12px; }
+.tooltip .r b { font-variant-numeric: tabular-nums; font-weight: 500; }
+.seg { display:inline-flex; flex-wrap: wrap; border:1px solid var(--ring); border-radius:8px; overflow:hidden; margin-bottom:10px; }
+.seg button { border:0; background:transparent; color:var(--ink2); padding:5px 12px; cursor:pointer; font:inherit; font-size:12px; }
+.seg button.on { background: var(--grid); color: var(--ink); font-weight: 600; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); }
+th { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr:hover td { background: color-mix(in srgb, var(--grid) 40%, transparent); }
+.pos { color: var(--good); } .neg { color: var(--bad); }
+.pill { font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--ring); color: var(--ink2); }
+.copyable { border-color: var(--good); color: var(--good); }
+.pill.fail { border-color: var(--bad); color: var(--bad); }
+.pill.ok { border-color: var(--good); color: var(--good); }
+.note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.caveats { color: var(--ink2); font-size: 13px; }
+.caveats li { margin: 4px 0 4px 18px; }
+#err { color: var(--bad); margin-top: 16px; white-space: pre-wrap; }
+.statgrid { overflow-x: auto; }
+.cols2 { display:grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 16px; }
+code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+nav.toc {
+  position: sticky; top: 0; z-index: 10; margin: 14px -24px 0; padding: 9px 24px;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--grid);
+  display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center;
+}
+nav.toc a {
+  color: var(--ink2); text-decoration: none; font-size: 12px;
+  padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
+  white-space: nowrap;
+}
+nav.toc a:hover { color: var(--ink); border-color: var(--ring); }
+nav.toc a.on { color: var(--ink); background: var(--grid); font-weight: 600; }
+nav.toc .grp {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 2px 0 10px;
+}
+nav.toc .grp:first-child { margin-left: 0; }
+
+h2[id] { scroll-margin-top: 62px; }
+
+.verdict {
+  border-left: 3px solid var(--s4);
+  background: color-mix(in srgb, var(--s4) 7%, var(--surface));
+}
+.verdict b { color: var(--ink); }
+.verdict .line { margin: 3px 0; }
+
+@media (max-width: 720px) {
+  nav.toc { margin: 14px -16px 0; padding: 8px 16px; }
+  body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<h1>CopyTrade <span class="badge" id="mode-badge"></span></h1>
+<div class="sub">Disclosure-based copy trading, backtested with point-in-time discipline
+every entry executes at the first close <em>after</em> the filing, net of transaction costs.</div>
+
+<nav class="toc" id="toc">
+  <span class="grp">Findings</span>
+  <a href="#scorecard">Scorecard</a>
+  <a href="#timescale">Timescale</a>
+  <a href="#netedge">Net edge</a>
+  <a href="#factors">Factors</a>
+  <a href="#conviction">Conviction</a>
+  <a href="#jurisdiction">Jurisdiction</a>
+  <a href="#persistence">Who to copy</a>
+  <a href="#exits">Exits</a>
+  <a href="#leverage">Leverage</a>
+  <a href="#costs">Broker costs</a>
+  <span class="grp">Evidence</span>
+  <a href="#walkforward">Walk-forward</a>
+  <a href="#decay">Decay</a>
+  <a href="#timeline">Year by year</a>
+  <a href="#lag">Disclosure lag</a>
+  <a href="#areas">Sectors</a>
+  <span class="grp">Portfolio</span>
+  <a href="#ranking">Ranking</a>
+  <a href="#profits">Track records</a>
+  <a href="#holdings">Positions</a>
+  <a href="#sleeves">Sleeves</a>
+  <span class="grp">Data</span>
+  <a href="#health">Health</a>
+  <a href="#quality">Integrity</a>
+  <a href="#filings">Filings</a>
+  <a href="#caveats">Caveats</a>
+</nav>
+
+<div id="err"></div>
+<div id="verdict-wrap"></div>
+<div class="tiles" id="tiles"></div>
+
+<!-- ============================== FINDINGS ============================== -->
+
+<h2 id="scorecard">Scorecard: the copy basket vs what you'd otherwise hold</h2>
+<div class="card">
+  <div class="seg" id="ccy-seg"></div>
+  <div class="seg" id="depth-seg"></div>
+  <div class="statgrid"><table id="score-table"></table></div>
+  <div class="note" id="score-note"></div>
+</div>
+
+<h2 id="timescale">Timescale: is there a signal at ANY holding horizon?</h2>
+<div class="card">
+  <div class="note" style="margin:0 0 10px">
+    Every cell is point-in-time and cost-net. Colour is the mean excess return;
+    <b>bold</b> cells survive Benjamini-Hochberg FDR across the whole grid.
+    <code>t_adj</code> clusters on non-overlapping blocks as long as the holding
+    period, because two 504-day positions opened a month apart share ~96% of
+    their window and are not independent draws. Hover a cell for n, both
+    t-stats, block count and q.
+  </div>
+  <div class="statgrid"><table id="ts-table"></table></div>
+  <h3>Decay shape by subset, a real signal rises then flattens, noise wanders</h3>
+  <div class="seg" id="ts-seg"></div>
+  <div class="chartwrap">
+    <canvas id="ts-chart" class="short"></canvas><div class="tooltip" id="ts-tip"></div>
+  </div>
+  <h3>Per band: how much of the raw significance survives correction</h3>
+  <div class="statgrid"><table id="ts-band"></table></div>
+  <div class="note" id="ts-note"></div>
+</div>
+
+<h2 id="netedge">Net edge: the fair test, not “beat SPY”</h2>
+<div class="card">
+  <h3>1. Absolute scorecard (standalone risk/return, no beat-SPY gate)</h3>
+  <div class="statgrid"><table id="ne-abs"></table></div>
+  <h3>2. Beta-neutral long/short: long the basket, short beta × SPY</h3>
+  <div class="statgrid"><table id="ne-hedge"></table></div>
+  <div class="note">Market direction is hedged out, so whatever is left is signal.
+  This is the cleanest alpha isolation in the project: <b>|t| &gt; 2 would mean real
+  alpha independent of market beta</b>.</div>
+  <h3>3. Consensus CAR: “≥3 members piled into the same name”</h3>
+  <div class="statgrid"><table id="ne-car"></table></div>
+  <div class="note" id="ne-note"></div>
+</div>
+
+<h2 id="factors">Factor attribution, skill, or a known tilt?</h2>
+<div class="card">
+  <h3>Fama-French regression of the basket's monthly excess return</h3>
+  <div class="statgrid"><table id="ff-table"></table></div>
+  <h3>Single-benchmark regressions</h3>
+  <div class="statgrid"><table id="ff-single"></table></div>
+  <div class="note" id="ff-note"></div>
+</div>
+
+<h2 id="conviction">Conviction: does filtering to the “high conviction” buys help?</h2>
+<div class="card">
+  <div class="statgrid"><table id="conv-table"></table></div>
+  <div class="note" id="conv-note"></div>
+</div>
+
+<h2 id="jurisdiction">Committee jurisdiction, do members trade better inside their own remit?</h2>
+<div class="card">
+  <div class="note" style="margin:0 0 10px">
+    The hypothesis the literature actually makes (Ziobrowski et al.). Each trade
+    is scored against the committee roster <b>in force on its own filing date</b>,
+    walked from historical snapshots, so a 2016 trade is never judged by a
+    2026 committee assignment.
+  </div>
+  <div class="tiles" id="jur-tiles" style="margin-top:0"></div>
+  <div class="statgrid" style="margin-top:10px"><table id="jur-table"></table></div>
+  <div class="note" id="jur-note"></div>
+</div>
+
+<h2 id="persistence">Who to copy, out-of-sample filer persistence</h2>
+<div class="card">
+  <div class="tiles" id="pers-tiles" style="margin-top:0"></div>
+  <div class="chartwrap" style="margin-top:12px">
+    <canvas id="pers-chart" class="short"></canvas><div class="tooltip" id="pers-tip"></div>
+  </div>
+  <div class="statgrid" style="margin-top:10px"><table id="pers-table"></table></div>
+  <div class="note" id="pers-note"></div>
+</div>
+
+<h2 id="exits">Exits: does any rule beat “hold N days”?</h2>
+<div class="card">
+  <div class="statgrid"><table id="exit-table"></table></div>
+  <div class="note" id="exit-note"></div>
+</div>
+
+<h2 id="leverage">Leverage: how hard can this be pushed before ruin?</h2>
+<div class="card">
+  <div class="seg" id="lev-seg"></div>
+  <div class="statgrid"><table id="lev-table"></table></div>
+  <h3>Return vs risk of ruin across every candidate</h3>
+  <div class="chartwrap">
+    <canvas id="lev-chart" class="short"></canvas><div class="tooltip" id="lev-tip"></div>
+  </div>
+  <div class="note" id="lev-note"></div>
+</div>
+
+<h2 id="costs">Broker costs: what the platform choice alone does to the answer</h2>
+<div class="card">
+  <div class="statgrid"><table id="cost-table"></table></div>
+  <div class="note" id="cost-note"></div>
+</div>
+
+<!-- ============================== EVIDENCE ============================== -->
+
+<h2 id="walkforward">Walk-forward: copy the top filers vs low-effort strategies</h2>
+<div class="card">
+  <div class="legend" id="eq-legend"></div>
+  <div class="chartwrap">
+    <canvas id="eq-chart"></canvas><div class="tooltip" id="eq-tip"></div>
+  </div>
+  <div class="seg" id="wf-depth-seg"></div>
+  <div class="statgrid"><table id="stats-table"></table></div>
+  <h3>Capacity: how much of “copy everyone” actually fit</h3>
+  <div id="wf-capacity"></div>
+  <div class="note" id="wf-note"></div>
+</div>
+
+<h2 id="decay">Signal decay: how much alpha does the disclosure lag destroy?</h2>
+<div class="card">
+  <div class="seg" id="decay-seg"></div>
+  <div class="legend">
+    <span style="--c: var(--s1)">anchored at transaction (zero-lag, hypothetical)</span>
+    <span style="--c: var(--s2)">anchored at filing (what you can actually copy)</span>
+  </div>
+  <div class="chartwrap">
+    <canvas id="decay-chart"></canvas><div class="tooltip" id="decay-tip"></div>
+  </div>
+  <div class="note" id="decay-note"></div>
+</div>
+
+<h2 id="timeline">Year by year, which years did following the crowd help?</h2>
+<div class="card">
+  <div class="chartwrap">
+    <canvas id="tl-chart"></canvas><div class="tooltip" id="tl-tip"></div>
+  </div>
+  <div class="statgrid" style="margin-top:10px"><table id="tl-table"></table></div>
+  <div class="note" id="tl-note"></div>
+</div>
+
+<h2 id="lag">Disclosure lag: why you cannot get there first</h2>
+<div class="card">
+  <div class="tiles" id="lag-tiles" style="margin-top:0"></div>
+  <div class="chartwrap" style="margin-top:12px">
+    <canvas id="lag-chart" class="short"></canvas><div class="tooltip" id="lag-tip"></div>
+  </div>
+  <div class="cols2" style="margin-top:14px">
+    <div><h3>By source</h3><div class="statgrid"><table id="lag-source"></table></div></div>
+    <div><h3>Statutory limits</h3><div class="statgrid"><table id="lag-stat"></table></div></div>
+  </div>
+  <h3>Fastest disclosers: the only real lever on congressional lag</h3>
+  <div class="statgrid"><table id="lag-fast"></table></div>
+  <div class="note" id="lag-note"></div>
+</div>
+
+<h2 id="areas">Sectors: what they pursue, and where the picks actually worked</h2>
+<div class="card">
+  <div class="chartwrap">
+    <canvas id="area-chart" class="short"></canvas><div class="tooltip" id="area-tip"></div>
+  </div>
+  <div class="statgrid" style="margin-top:10px"><table id="area-table"></table></div>
+  <h3>Individual names</h3>
+  <div class="seg" id="area-seg"></div>
+  <div class="statgrid"><table id="area-names"></table></div>
+  <div class="note" id="area-note"></div>
+</div>
+
+<!-- ============================== PORTFOLIO ============================= -->
+
+<h2 id="ranking">Filer ranking <span class="badge">click headers to sort</span></h2>
+<div class="card" style="overflow-x:auto">
+  <table id="rank-table"></table>
+  <div class="note" id="rank-note"></div>
+</div>
+
+<h2 id="profits">Track records: per filer, no significance gate</h2>
+<div class="card" style="overflow-x:auto">
+  <div class="seg" id="prof-seg"></div>
+  <table id="prof-table"></table>
+  <div class="note" id="prof-note"></div>
+</div>
+
+<h2 id="holdings">Disclosed positions, direction and attention, <em>not</em> a portfolio</h2>
+<div class="card">
+  <div class="note" style="margin:0 0 10px;color:var(--warn)" id="hold-caveat"></div>
+  <div class="seg" id="hold-seg"></div>
+  <div class="statgrid"><table id="hold-table"></table></div>
+  <div class="note" id="hold-note"></div>
+</div>
+
+<h2 id="sleeves">Account sleeves, TFSA vs margin (Canada) <span class="badge">docs/CANADA.md</span></h2>
+<div class="card" style="overflow-x:auto">
+  <table id="alloc-table"></table>
+  <div class="note" id="alloc-notes"></div>
+</div>
+
+<!-- ================================ DATA =============================== -->
+
+<h2 id="health">Data health <span class="badge" id="health-age"></span></h2>
+<div class="card">
+  <div id="health-summary"></div>
+  <div class="statgrid" style="margin-top:10px"><table id="health-sources"></table></div>
+  <div class="note" id="health-bench"></div>
+</div>
+
+<h2 id="quality">Data integrity <span class="badge" id="quality-age"></span></h2>
+<div class="card">
+  <div class="note" style="margin:0 0 10px">
+    Every number above inherits whatever is wrong here. Two bugs of exactly this
+    shape: non-positive prices stored as prices, and an uncapped per-share
+    commission: once drove the whole-sample mean below −100% for a long-only
+    book. An impossible aggregate is a data bug, never a finding.
+  </div>
+  <div class="statgrid"><table id="qual-table"></table></div>
+  <h3>Quarantined price series: excluded at the load choke point, not deleted</h3>
+  <div class="statgrid"><table id="qual-quar"></table></div>
+  <div class="note" id="qual-quar-note"></div>
+  <h3>Passed the screens, but worth a human glance</h3>
+  <div class="statgrid"><table id="qual-review"></table></div>
+  <div class="note">A wide price range is not by itself a defect, a correctly
+  adjusted reverse split produces one. FCEL legitimately spans 16,980 → 3.73 after
+  compounding reverse splits, and CELH genuinely ran 0.12 → 43.81. These passed
+  every screen; they are listed because the honest way to run a heuristic is to
+  show what it nearly caught.</div>
+  <div class="tiles" id="qual-tiles"></div>
+  <div class="note" id="qual-note"></div>
+</div>
+
+<h2 id="filings">Recent filings</h2>
+<div class="card" style="overflow-x:auto"><table id="trades-table"></table></div>
+
+<h2 id="caveats">Caveats</h2>
+<div class="card caveats"><ul>
+  <li>Congress amounts are <b>ranges</b>, never exact sizes; options are excluded from backtests
+      (unpriceable from a range disclosure), so a filer whose edge is leverage looks weaker here.</li>
+  <li id="cav-unpriced">Unpriceable/delisted tickers are excluded and counted, results are upward-biased to the extent losers delist.</li>
+  <li>Decay curves are gross of costs; equity curves and tables are net.</li>
+  <li>The copy basket holds a little uninvested cash between signals and that cash earns
+      <b>nothing</b>; measured mean invested weight is ~97%, so the drag is roughly 0.3-0.5%/yr
+      against a 100%-invested ETF. It is a real part of the gap, not the whole of it.</li>
+  <li>Sharpe/Sortino/Treynor use a <b>0% risk-free rate</b> for every row, so they are comparable
+      with each other but are not absolute risk-adjusted returns.</li>
+  <li>Equity curves are <b>pre-tax</b>. A high-turnover book in a margin sleeve pays annually;
+      after-tax curves are not modelled.</li>
+  <li>Research tooling only: nothing here places orders or is investment advice.</li>
+</ul></div>
+
+<script>
+"use strict";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtPct = (v, dp=1) => v==null ? ", " : (v*100).toFixed(dp) + "%";
+const fmtSign = (v, dp=2) => v==null ? ", " : (v>0?"+":"") + (v*100).toFixed(dp) + "%";
+const fmtNum = (v, dp=2) => v==null ? ", " : v.toFixed(dp);
+const fmtInt = v => v==null ? ", " : Number(v).toLocaleString();
+const cls = v => v==null ? "" : (v>=0 ? "pos" : "neg");
+const PAL = () => [css("--s1"),css("--s2"),css("--s3"),css("--s4"),css("--s5"),css("--s6"),css("--s7")];
+
+async function j(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(url + " → " + r.status + ": " + (await r.text()));
+  return r.json();
+}
+
+/* ---- line chart: hairline grid, 2px lines, crosshair tooltip ---- */
+function lineChart(canvas, tip, series, opts={}) {
+  if (!canvas || !series.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const draw = () => {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return {};
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0,0,W,H);
+    const padL = 52, padR = 12, padT = 10, padB = 24;
+    const xs = series[0].x;
+    let lo = Infinity, hi = -Infinity;
+    for (const s of series) for (const v of s.y) if (v!=null) { lo=Math.min(lo,v); hi=Math.max(hi,v); }
+    if (!isFinite(lo)) return {};
+    if (opts.zeroline) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+    if (opts.log) { lo = Math.max(lo, 1e-6); }
+    const span = (hi-lo)||1; lo -= span*.05; hi += span*.05;
+    const X = i => padL + (W-padL-padR) * (xs.length<2 ? 0 : i/(xs.length-1));
+    const Y = v => padT + (H-padT-padB) * (1-(v-lo)/(hi-lo));
+    ctx.font = "10px system-ui"; ctx.fillStyle = css("--muted");
+    const nT = 5;
+    for (let t=0;t<=nT;t++) {
+      const v = lo + (hi-lo)*t/nT, y = Y(v);
+      ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+      ctx.textAlign = "right"; ctx.fillText(opts.yfmt ? opts.yfmt(v) : v.toFixed(2), padL-6, y+3);
+    }
+    if (opts.zeroline && lo<0 && hi>0) {
+      ctx.strokeStyle = css("--baseline"); ctx.beginPath();
+      ctx.moveTo(padL, Y(0)); ctx.lineTo(W-padR, Y(0)); ctx.stroke();
+    }
+    ctx.textAlign = "center";
+    const step = Math.max(1, Math.floor(xs.length/6));
+    for (let i=0;i<xs.length;i+=step) ctx.fillText(String(xs[i]), X(i), H-8);
+    for (const s of series) {
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.beginPath();
+      let started = false;
+      s.y.forEach((v,i) => { if (v==null) return;
+        started ? ctx.lineTo(X(i),Y(v)) : ctx.moveTo(X(i),Y(v)); started = true; });
+      ctx.stroke();
+    }
+    return {X, Y, padL, padR, W, H};
+  };
+  let geom = draw();
+  new ResizeObserver(() => { geom = draw(); }).observe(canvas);
+
+  canvas.onmousemove = e => {
+    if (!geom.X) { geom = draw(); if (!geom.X) return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const xs = series[0].x;
+    const i = Math.max(0, Math.min(xs.length-1,
+      Math.round((mx - geom.padL)/(geom.W-geom.padL-geom.padR)*(xs.length-1))));
+    geom = draw();
+    const ctx = canvas.getContext("2d");
+    ctx.strokeStyle = css("--baseline"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(geom.X(i), 8); ctx.lineTo(geom.X(i), canvas.clientHeight-24); ctx.stroke();
+    for (const s of series) if (s.y[i]!=null) {
+      ctx.fillStyle = s.color; ctx.beginPath();
+      ctx.arc(geom.X(i), geom.Y(s.y[i]), 4, 0, 7); ctx.fill();
+      ctx.strokeStyle = css("--surface"); ctx.lineWidth = 2; ctx.stroke();
+    }
+    tip.style.display = "block";
+    tip.innerHTML = `<div class="d">${xs[i]}</div>` + series.map(s =>
+      `<div class="r"><span style="color:${s.color}">●</span> ${s.name}
+       <b>${s.y[i]==null ? ": " : (opts.tipfmt||fmtSign)(s.y[i])}</b></div>`).join("");
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.min(mx+14, canvas.clientWidth-tw-4) + "px";
+    tip.style.top = "14px";
+  };
+  canvas.onmouseleave = () => { tip.style.display = "none"; geom = draw(); };
+}
+
+/* ---- bar chart: one or two series, signed bars around a zero line ---- */
+function barChart(canvas, tip, labels, series, opts={}) {
+  if (!canvas || !labels.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  let bars = [];
+  const draw = () => {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr); ctx.clearRect(0,0,W,H);
+    const padL = 52, padR = 12, padT = 10, padB = 34;
+    let lo = 0, hi = 0;
+    for (const s of series) for (const v of s.y) if (v!=null) { lo=Math.min(lo,v); hi=Math.max(hi,v); }
+    if (lo===0 && hi===0) hi = 1;
+    const pad = (hi-lo)*.08; lo -= pad; hi += pad;
+    const Y = v => padT + (H-padT-padB) * (1-(v-lo)/(hi-lo));
+    ctx.font = "10px system-ui"; ctx.fillStyle = css("--muted");
+    for (let t=0;t<=4;t++) {
+      const v = lo + (hi-lo)*t/4, y = Y(v);
+      ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+      ctx.textAlign = "right"; ctx.fillText(opts.yfmt ? opts.yfmt(v) : v.toFixed(2), padL-6, y+3);
+    }
+    ctx.strokeStyle = css("--baseline"); ctx.beginPath();
+    ctx.moveTo(padL, Y(0)); ctx.lineTo(W-padR, Y(0)); ctx.stroke();
+    const slot = (W-padL-padR)/labels.length;
+    const bw = Math.max(2, (slot*0.74)/series.length);
+    bars = [];
+    labels.forEach((lab,i) => {
+      series.forEach((s,k) => {
+        const v = s.y[i];
+        if (v==null) return;
+        const x = padL + slot*i + slot*0.13 + k*bw;
+        const y0 = Y(0), y1 = Y(v);
+        ctx.fillStyle = s.color || (v>=0 ? css("--s2") : css("--bad"));
+        ctx.fillRect(x, Math.min(y0,y1), bw, Math.max(1,Math.abs(y1-y0)));
+        bars.push({x, w:bw, i});
+      });
+      const every = Math.ceil(labels.length/12);
+      if (i % every === 0) {
+        ctx.fillStyle = css("--muted"); ctx.textAlign = "center";
+        ctx.save();
+        const cx = padL + slot*i + slot/2;
+        if (opts.rotate) { ctx.translate(cx, H-6); ctx.rotate(-Math.PI/5); ctx.textAlign="right"; ctx.fillText(String(lab),0,0); }
+        else ctx.fillText(String(lab), cx, H-10);
+        ctx.restore();
+      }
+    });
+  };
+  draw();
+  new ResizeObserver(draw).observe(canvas);
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const hit = bars.find(b => mx >= b.x-2 && mx <= b.x+b.w+2);
+    if (!hit) { tip.style.display="none"; return; }
+    tip.style.display = "block";
+    tip.innerHTML = `<div class="d">${labels[hit.i]}</div>` + series.map(s =>
+      `<div class="r"><span style="color:${s.color||css('--s2')}">●</span> ${s.name}
+       <b>${s.y[hit.i]==null ? ": " : (opts.tipfmt||fmtSign)(s.y[hit.i])}</b></div>`).join("");
+    tip.style.left = Math.min(mx+14, canvas.clientWidth-tip.offsetWidth-4)+"px";
+    tip.style.top = "10px";
+  };
+  canvas.onmouseleave = () => tip.style.display = "none";
+}
+
+/* ---- scatter: x = risk, y = return, one point per (candidate, leverage) ---- */
+function scatterChart(canvas, tip, groups, opts={}) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  let pts = [];
+  const draw = () => {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    const ctx = canvas.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+    const padL = 54, padR = 12, padT = 12, padB = 32;
+    const all = groups.flatMap(g => g.points);
+    if (!all.length) return;
+    let xlo=0, xhi=Math.max(...all.map(p=>p.x)), ylo=Math.min(0,...all.map(p=>p.y)), yhi=Math.max(...all.map(p=>p.y));
+    xhi = xhi || 1; const yp=(yhi-ylo)*.1||1; ylo-=yp; yhi+=yp;
+    const X = v => padL + (W-padL-padR)*(v-xlo)/(xhi-xlo||1);
+    const Y = v => padT + (H-padT-padB)*(1-(v-ylo)/(yhi-ylo||1));
+    ctx.font="10px system-ui";
+    for (let t=0;t<=4;t++) {
+      const v=ylo+(yhi-ylo)*t/4, y=Y(v);
+      ctx.strokeStyle=css("--grid"); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+      ctx.fillStyle=css("--muted"); ctx.textAlign="right"; ctx.fillText(opts.yfmt?opts.yfmt(v):v.toFixed(2), padL-6, y+3);
+    }
+    for (let t=0;t<=4;t++) {
+      const v=xlo+(xhi-xlo)*t/4;
+      ctx.fillStyle=css("--muted"); ctx.textAlign="center";
+      ctx.fillText(opts.xfmt?opts.xfmt(v):v.toFixed(2), X(v), H-10);
+    }
+    // the 5% risk-of-ruin bar the sizing rule keys off
+    if (opts.vline != null && opts.vline <= xhi) {
+      ctx.strokeStyle=css("--bad"); ctx.setLineDash([4,3]); ctx.beginPath();
+      ctx.moveTo(X(opts.vline), padT); ctx.lineTo(X(opts.vline), H-padB); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=css("--bad"); ctx.textAlign="left";
+      ctx.fillText("P(call)=5%", X(opts.vline)+4, padT+10);
+    }
+    pts = [];
+    for (const g of groups) {
+      ctx.strokeStyle=g.color; ctx.lineWidth=1.5; ctx.beginPath();
+      g.points.forEach((p,i)=> i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)));
+      ctx.stroke();
+      for (const p of g.points) {
+        const px=X(p.x), py=Y(p.y);
+        ctx.fillStyle = p.liquidated ? css("--bad") : g.color;
+        ctx.beginPath(); ctx.arc(px,py, p.liquidated?5:4, 0, 7); ctx.fill();
+        if (p.liquidated) { ctx.strokeStyle=css("--surface"); ctx.lineWidth=1.5; ctx.stroke(); }
+        pts.push({px,py,p,g});
+      }
+    }
+  };
+  draw();
+  new ResizeObserver(draw).observe(canvas);
+  canvas.onmousemove = e => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX-r.left, my = e.clientY-r.top;
+    const hit = pts.find(q => Math.hypot(q.px-mx, q.py-my) < 9);
+    if (!hit) { tip.style.display="none"; return; }
+    tip.style.display="block";
+    tip.innerHTML = `<div class="d">${hit.g.name} @ ${hit.p.lev.toFixed(2)}x`
+      + (hit.p.liquidated ? ' <span style="color:var(--bad)">LIQUIDATED</span>' : '') + `</div>`
+      + `<div class="r">bootstrap median <b>${fmtSign(hit.p.y,0)}</b></div>`
+      + `<div class="r">P(margin call) <b>${fmtPct(hit.p.x,1)}</b></div>`
+      + `<div class="r">5th pct outcome <b>${fmtSign(hit.p.p05,0)}</b></div>`;
+    tip.style.left = Math.min(mx+14, canvas.clientWidth-tip.offsetWidth-4)+"px";
+    tip.style.top = Math.max(4,my-10)+"px";
+  };
+  canvas.onmouseleave = () => tip.style.display="none";
+}
+
+/* ------------------------------- tables -------------------------------- */
+function renderTable(el, cols, rows) {
+  if (!el) return;
+  let sortKey = null, asc = false;
+  const draw = () => {
+    const data = sortKey ? [...rows].sort((a,b) => {
+      const x=a[sortKey], y=b[sortKey];
+      if (x==null) return 1; if (y==null) return -1;
+      return (x<y?-1:x>y?1:0) * (asc?1:-1);
+    }) : rows;
+    el.innerHTML = "<tr>" + cols.map(c =>
+      `<th class="${c.num?'num':''}" data-k="${c.key}">${c.label}${sortKey===c.key?(asc?" ↑":" ↓"):""}</th>`
+    ).join("") + "</tr>" + data.map(r => "<tr>" + cols.map(c =>
+      `<td class="${c.num?'num':''} ${c.cls?c.cls(r[c.key],r):''}">${c.fmt?c.fmt(r[c.key],r):(r[c.key] ?? ", ")}</td>`
+    ).join("") + "</tr>").join("");
+    el.querySelectorAll("th").forEach(th => th.onclick = () => {
+      const k = th.dataset.k; asc = (sortKey===k) ? !asc : false; sortKey = k; draw();
+    });
+  };
+  draw();
+}
+
+/* metric-name rows down the side, entities across the top */
+function matrixTable(el, rowDefs, entities, nameKey="name") {
+  if (!el) return;
+  let html = "<thead><tr><th>metric</th>" +
+    entities.map(e => `<th class="num">${e[nameKey]}</th>`).join("") + "</tr></thead><tbody>";
+  for (const [key,label,kind,colour] of rowDefs) {
+    html += `<tr><td>${label}</td>` + entities.map(e => {
+      const v = e[key];
+      if (v == null) return `<td class="num">, </td>`;
+      const txt = kind==="pct0" ? fmtPct(v,0) : kind==="pct1" ? fmtPct(v,1)
+                : kind==="pct2" ? fmtSign(v,2) : kind==="int" ? fmtInt(v) : fmtNum(v);
+      return `<td class="num ${colour?cls(v):""}">${txt}</td>`;
+    }).join("") + "</tr>";
+  }
+  el.innerHTML = html + "</tbody>";
+}
+
+function tile(v, l) { return `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`; }
+function seg(host, options, onPick) {
+  if (!host || !options.length) return;
+  host.innerHTML = options.map(([v,l],i) =>
+    `<button data-v="${v}" class="${i===0?'on':''}">${l}</button>`).join("");
+  host.querySelectorAll("button").forEach(b => b.onclick = () => {
+    host.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    onPick(b.dataset.v);
+  });
+  onPick(options[0][0]);
+}
+const stale = el => {
+  if (!el) return "";
+  const days = (Date.now() - new Date(el).getTime()) / 86400000;
+  return days > 7 ? ` · built ${Math.round(days)}d ago, rebuild` : "";
+};
+const need = id => {
+  const t = document.getElementById(id);
+  if (t) t.innerHTML = '<tr><td class="note">not built yet, run ' +
+    '<code>python -m copytrade dashboard-build</code></td></tr>';
+};
+const setNote = (id, html) => { const e = document.getElementById(id); if (e) e.innerHTML = html; };
+const sig = p => p==null ? "" : p<0.01 ? "***" : p<0.05 ? "**" : p<0.1 ? "*" : "";
+
+/* ================================ main ================================= */
+(async function main() {
+  const NAMES = ["health","quality","scorecard","scorecard_cad","timescale","exits",
+                 "leverage","persistence","jurisdiction","netedge","factors","conviction",
+                 "costs","lag","areas","decay","walkforward","timeline","ranking",
+                 "profits","holdings","allocation"];
+  const A = {};
+  /* Why a panel is absent matters: a 404 means it was never built and a
+     rebuild is the fix, while anything else means the request did not get
+     through and the panel on disk may be perfectly current. Reporting both as
+     "never built" sends the reader off to re-run a six-minute build for a
+     dropped connection. */
+  const A_FAIL = {};
+  await Promise.all(NAMES.map(async n => {
+    try { A[n] = await j("/api/analysis/" + n); }
+    catch (e) {
+      A[n] = null;
+      A_FAIL[n] = /→ 404/.test(String(e && e.message)) ? "unbuilt" : "unreachable";
+    }
+  }));
+
+  let sum = null;
+  try {
+    sum = await j("/api/summary");
+    document.getElementById("mode-badge").textContent =
+      sum.demo_data ? "synthetic demo data" : "live data";
+  } catch (e) { /* header badge is cosmetic */ }
+
+  /* ---- mixed-vintage check ----
+     Panels are built one at a time, so a run that dies partway leaves a
+     MIXTURE of vintages. That is more dangerous than a uniformly stale
+     dashboard: every panel looks fine alone, but they no longer describe the
+     same data, and cross-panel statements ("gross is -0.29% and the round trip
+     is 30bps, so the net figure IS the cost") quietly stop holding. Staleness
+     used to be checked on health and quality only, which is how scorecard_cad
+     once sat eleven days behind everything beside it without a word. */
+  /* A full 22-panel dashboard-build spans 6.7 minutes end to end (measured
+     2026-08-13), with 1.3 min the largest gap between consecutive panels. One
+     hour is ~9x that, so a legitimate build never trips this, while the case
+     it exists for, scorecard_cad sitting 261h behind its neighbours, clears
+     it by two orders of magnitude. */
+  const VINTAGE_TOLERANCE_H = 1;
+  let vintageWarning = "";
+  {
+    const built = NAMES
+      .filter(n => A[n] && A[n].built_at)
+      .map(n => ({ name: n, t: new Date(A[n].built_at).getTime() }))
+      .filter(x => !isNaN(x.t));
+    if (built.length) {
+      const newest = Math.max(...built.map(x => x.t));
+      const behind = built
+        .map(x => ({ name: x.name, lagH: (newest - x.t) / 3600000 }))
+        .filter(x => x.lagH > VINTAGE_TOLERANCE_H)
+        .sort((a, b) => b.lagH - a.lagH);
+      if (behind.length) {
+        // Each panel's OWN lag, not the overall spread: quoting the spread as
+        // though it were every laggard's age says "more than 261h behind" about
+        // a panel that is two hours old.
+        const lag = h => h >= 48 ? `${Math.round(h / 24)}d` : `${Math.round(h)}h`;
+        vintageWarning =
+          `<span class="neg"><b>Panels are from different builds.</b> ` +
+          `${behind.length} of ${built.length} are more than ` +
+          `${VINTAGE_TOLERANCE_H}h behind the newest: ` +
+          `${behind.slice(0, 6).map(x => `${x.name} (${lag(x.lagH)})`).join(", ")}` +
+          `${behind.length > 6 ? ", …" : ""}. They do not describe the same ` +
+          `data: re-run <code>python -m copytrade dashboard-build</code>.</span>`;
+      }
+    }
+    const unbuilt = NAMES.filter(n => A_FAIL[n] === "unbuilt");
+    const unreachable = NAMES.filter(n => A_FAIL[n] === "unreachable");
+    if (unbuilt.length) {
+      vintageWarning += `${vintageWarning ? "<br>" : ""}<span class="neg">` +
+        `${unbuilt.length} panel(s) never built: ${unbuilt.join(", ")}, run ` +
+        `<code>python -m copytrade dashboard-build</code>.</span>`;
+    }
+    if (unreachable.length) {
+      vintageWarning += `${vintageWarning ? "<br>" : ""}<span class="neg">` +
+        `${unreachable.length} panel(s) failed to load: ${unreachable.join(", ")}, ` +
+        `a request problem, not necessarily a stale build; reload first.</span>`;
+    }
+  }
+
+  /* ---- verdict banner ---- */
+  {
+    const bits = [];
+    for (const k of ["timescale","scorecard","persistence","netedge"]) {
+      if (A[k] && !A[k].error && A[k].verdict) bits.push(A[k].verdict);
+    }
+    if (A.quality && A.quality.n_failed > 0) bits.unshift(`<span class="neg">${A.quality.verdict}</span>`);
+    if (vintageWarning) bits.unshift(vintageWarning);
+    if (bits.length) document.getElementById("verdict-wrap").innerHTML =
+      `<div class="card verdict"><div style="font-size:13px;line-height:1.5">` +
+      bits.map(b => `<div class="line">${b}</div>`).join("") + `</div></div>`;
+  }
+
+  /* ---- headline tiles ---- */
+  {
+    const h = A.health, r = A.ranking, ts = A.timescale;
+    const t = [];
+    if (h && !h.error) {
+      t.push([fmtInt(h.trades), "trades"], [fmtInt(h.filers), "filers"],
+             [fmtPct(h.coverage,0), "price coverage"]);
+    }
+    if (ts && !ts.error) t.push([`${ts.n_survivors}/${ts.grid.filter(c=>c.p!=null).length}`, "FDR survivors"]);
+    if (r && !r.error) t.push([r.n_copyable, `copyable filers (t>2, n≥${r.min_trades_rank})`]);
+    if (A.walkforward && !A.walkforward.error) {
+      const c = (A.walkforward.rows||[]).find(x => x.name === "Copy ALL");
+      if (c) t.push([fmtSign(c.total_return,0), "Copy ALL total return"]);
+    }
+    if (t.length) document.getElementById("tiles").innerHTML =
+      t.map(([v,l]) => tile(v,l)).join("");
+  }
+
+  /* ---- scorecard: headline vs every metric ---- */
+  const SC_HEAD = [
+    ["total_return","Total return","pct0"], ["cagr","CAGR","pct1"],
+    ["vol","Volatility","pct1"], ["max_drawdown","Max drawdown","pct1"],
+    ["sharpe","Sharpe","num2"], ["sortino","Sortino","num2"],
+    ["calmar","Calmar","num2"], ["beta","Beta vs SPY","num2"],
+    ["alpha_annualized","Jensen alpha","pct1",1],
+    ["info_ratio","Information ratio","num2",1],
+  ];
+  const SC_ALL = SC_HEAD.concat([
+    ["downside_dev","Downside deviation","pct1"],
+    ["corr","Correlation vs SPY","num2"], ["r2","R² vs SPY","num2"],
+    ["treynor","Treynor","num2"], ["tracking_error","Tracking error","pct1"],
+    ["up_capture","Up capture","num2"], ["down_capture","Down capture","num2"],
+    ["skew","Skew","num2"], ["kurtosis","Excess kurtosis","num2"],
+    ["var95","Daily VaR 95%","pct2"], ["cvar95","Daily CVaR 95%","pct2"],
+    ["omega","Omega","num2"], ["tail_ratio","Tail ratio","num2"],
+    ["pct_positive_days","% up days","pct1"],
+    ["best_day","Best day","pct2"], ["worst_day","Worst day","pct2"],
+    ["days","Trading days","int"],
+  ]);
+  let scCcy = "scorecard", scDepth = "head";
+  function drawScorecard() {
+    const d = A[scCcy];
+    if (!d || d.error) { need("score-table"); return; }
+    matrixTable(document.getElementById("score-table"),
+                scDepth === "head" ? SC_HEAD : SC_ALL, d.rows);
+    let note = `${d.span[0]} → ${d.span[1]}, net of <code>${d.cost_model}</code>, ${d.currency}.
+      Sharpe/Sortino/Treynor use a 0% risk-free rate.`;
+    if (d.fx) note += ` USD/CAD moved ${fmtSign(d.fx.fx_return,1)} over this window;
+      like-for-like, SPY returns ${fmtPct(d.fx.usd_cagr_same_window,2)} CAGR in USD
+      over the SAME span, compare against the CAD row to isolate the currency,
+      since a full-span USD comparison would credit FX with the shorter window.`;
+    if (d.regime && d.regime.switches != null)
+      note += ` Regime filter: ${d.regime.switches} switches,
+        ${fmtPct(d.regime.time_in_market,0)} of days in-market.`;
+    note += ` <b>${d.verdict||""}</b>`;
+    setNote("score-note", note);
+  }
+  if (A.scorecard && !A.scorecard.error) {
+    seg(document.getElementById("ccy-seg"),
+        [["scorecard","USD"],["scorecard_cad","CAD"]], v => { scCcy=v; drawScorecard(); });
+    seg(document.getElementById("depth-seg"),
+        [["head","headline"],["all","every metric"]], v => { scDepth=v; drawScorecard(); });
+  } else { need("score-table"); }
+
+  /* ---- timescale grid + decay shape + band summary ---- */
+  if (A.timescale && !A.timescale.error) {
+    const ts = A.timescale;
+    const subs = [...new Set(ts.grid.map(r => r.subset))];
+    const hs = [...new Set(ts.grid.map(r => r.horizon))].sort((a,b)=>a-b);
+    const by = {}; ts.grid.forEach(r => { by[r.subset+"|"+r.horizon] = r; });
+    const mags = ts.grid.map(r => Math.abs(r.mean||0)).filter(v=>v>0).sort((a,b)=>a-b);
+    const hi = mags.length ? mags[Math.floor(mags.length*0.95)] : 0.01;
+    let html = `<thead><tr><th>subset</th>` +
+      hs.map(h => `<th class="num">${h}d</th>`).join("") + `</tr></thead><tbody>`;
+    for (const s of subs) {
+      html += `<tr><td>${s}</td>` + hs.map(h => {
+        const r = by[s+"|"+h];
+        if (!r || r.mean == null) return `<td class="num">, </td>`;
+        const a = Math.min(Math.abs(r.mean)/(hi||1), 1) * 0.5;
+        const bg = r.mean >= 0 ? `rgba(0,131,0,${a})` : `rgba(208,59,59,${a})`;
+        const w = r.survives_fdr ? "font-weight:700" : "";
+        const title = `n=${r.n}  t_month=${fmtNum(r.t_month)}  t_adj=${fmtNum(r.t)}  ` +
+          `blocks=${r.blocks}  q=${fmtNum(r.q_fdr,3)}` + (r.underpowered?"  UNDERPOWERED":"");
+        return `<td class="num" style="background:${bg};${w}" title="${title}">${fmtSign(r.mean,2)}</td>`;
+      }).join("") + `</tr>`;
+    }
+    document.getElementById("ts-table").innerHTML = html + "</tbody>";
+
+    seg(document.getElementById("ts-seg"), subs.map(s=>[s,s]), sname => {
+      const g = ts.grid.filter(r => r.subset===sname).sort((a,b)=>a.horizon-b.horizon);
+      lineChart(document.getElementById("ts-chart"), document.getElementById("ts-tip"),
+        [{name:"mean excess", color: css("--s1"), x: g.map(r=>r.horizon+"d"), y: g.map(r=>r.mean)}],
+        {zeroline:true, yfmt:v=>(v*100).toFixed(1)+"%"});
+    });
+
+    if (ts.bands) renderTable(document.getElementById("ts-band"), [
+      {key:"band",label:"band"},
+      {key:"cells",label:"cells",num:1},
+      {key:"testable",label:"testable",num:1},
+      {key:"raw_p<0.05",label:"raw p<0.05",num:1},
+      {key:"survives_fdr",label:"survive FDR",num:1,
+       cls:(v)=>v>0?"pos":"", fmt:v=>`<b>${v}</b>`},
+      {key:"best_t",label:"best |t|",num:1,fmt:v=>fmtNum(v)},
+      {key:"best_mean",label:"at mean",num:1,fmt:v=>fmtSign(v,2),cls},
+    ], ts.bands);
+
+    let n = `${fmtInt(ts.n_priceable)} priceable of ${fmtInt(ts.n_buys)} buys,
+      excess vs ${ts.benchmark}. <b>${ts.verdict}</b>`;
+    if (ts.quartile_info && ts.quartile_info.degenerate)
+      n += `<br><span class="neg">Amounts are disclosed RANGES: the 75th percentile
+        sits on a tied bucket, so “large” is ${fmtPct(ts.quartile_info.fraction,1)}
+        of trades, not 25%.</span>`;
+    setNote("ts-note", n);
+  } else { need("ts-table"); }
+
+  /* ---- net edge ---- */
+  if (A.netedge && !A.netedge.error) {
+    const N = A.netedge;
+    renderTable(document.getElementById("ne-abs"), [
+      {key:"name",label:"strategy"},
+      {key:"total_return",label:"total",num:1,fmt:v=>fmtSign(v,0),cls},
+      {key:"cagr",label:"CAGR",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"vol",label:"vol",num:1,fmt:v=>fmtPct(v,1)},
+      {key:"sharpe",label:"Sharpe",num:1,fmt:v=>fmtNum(v)},
+      {key:"sortino",label:"Sortino",num:1,fmt:v=>fmtNum(v)},
+      {key:"calmar",label:"Calmar",num:1,fmt:v=>fmtNum(v)},
+      {key:"max_drawdown",label:"max DD",num:1,fmt:v=>fmtPct(v,1),cls},
+    ], N.absolute);
+    renderTable(document.getElementById("ne-hedge"), [
+      {key:"hedge",label:"hedge"},
+      {key:"beta",label:"beta",num:1,fmt:v=>fmtNum(v)},
+      {key:"alpha_annualized",label:"ann. alpha",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"sharpe",label:"Sharpe",num:1,fmt:v=>fmtNum(v)},
+      {key:"t",label:"t-stat",num:1,fmt:(v)=>`<b class="${Math.abs(v)>2?'pos':''}">${fmtNum(v)}</b>`},
+      {key:"n_months",label:"months",num:1},
+    ], N.hedges);
+    renderTable(document.getElementById("ne-car"), [
+      {key:"horizon",label:"horizon",fmt:v=>v+"d"},
+      {key:"n",label:"n",num:1,fmt:fmtInt},
+      {key:"mean_excess",label:"CAR",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"hit_rate",label:"hit%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"tstat",label:"t",num:1,fmt:v=>fmtNum(v)},
+    ], N.consensus.rows);
+    setNote("ne-note", `${fmtInt(N.consensus.n_buys)} consensus buys across
+      ${N.consensus.n_tickers} tickers (≥${N.consensus.min_filers} members within
+      ${N.consensus.window_days}d). <b>${N.verdict}</b>`);
+  } else { need("ne-abs"); need("ne-hedge"); need("ne-car"); }
+
+  /* ---- factors ---- */
+  if (A.factors && !A.factors.error) {
+    const F = A.factors, reg = F.regression || {};
+    const terms = Object.keys(reg).filter(k => reg[k] && typeof reg[k] === "object" && "coef" in reg[k]);
+    if (terms.length) {
+      renderTable(document.getElementById("ff-table"), [
+        {key:"term",label:"term"},
+        {key:"coef",label:"coef",num:1,fmt:(v,r)=>r.term==="alpha"?fmtSign(v,3):fmtSign(v,1),cls},
+        {key:"t",label:"t",num:1,fmt:v=>fmtNum(v)},
+        {key:"p",label:"p",num:1,fmt:v=>fmtNum(v,3)},
+        {key:"sig",label:"",fmt:(v,r)=>sig(r.p)},
+      ], terms.map(t => ({term:t, ...reg[t]})));
+    } else { need("ff-table"); }
+    renderTable(document.getElementById("ff-single"), [
+      {key:"benchmark",label:"benchmark"},
+      {key:"beta",label:"beta",num:1,fmt:v=>fmtNum(v)},
+      {key:"alpha_annualized",label:"ann. alpha",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"alpha_t",label:"alpha t",num:1,fmt:v=>fmtNum(v)},
+      {key:"r2",label:"R²",num:1,fmt:v=>fmtNum(v)},
+      {key:"n",label:"months",num:1},
+    ], F.singles || []);
+    setNote("ff-note", `${F.n_months} months, ${F.span?F.span[0]+" → "+F.span[1]:""}.
+      <b>${F.verdict||""}</b><br>High R² with a ~zero, insignificant alpha means that
+      benchmark explains the basket. RSP is the equal-weight breadth proxy; an IWM
+      alpha is usually a size-mismatch artifact, not skill.
+      ${F.ff_error?`<br><span class="neg">Fama-French download failed: ${F.ff_error}</span>`:""}`);
+  } else { need("ff-table"); need("ff-single"); }
+
+  /* ---- conviction ---- */
+  if (A.conviction && !A.conviction.error) {
+    renderTable(document.getElementById("conv-table"), [
+      {key:"subset",label:"subset"},
+      {key:"n",label:"n",num:1,fmt:fmtInt},
+      {key:"mean_excess",label:"mean excess",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"hit_rate",label:"hit%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"tstat",label:"t (monthly)",num:1,
+       fmt:v=>`<b class="${Math.abs(v)>2?'pos':''}">${fmtNum(v)}</b>`},
+    ], A.conviction.rows);
+    setNote("conv-note", `<b>${A.conviction.verdict}</b><br>${A.conviction.caveat}`);
+  } else { need("conv-table"); }
+
+  /* ---- jurisdiction ---- */
+  if (A.jurisdiction && !A.jurisdiction.error) {
+    const J = A.jurisdiction, e = J.eligibility || {};
+    document.getElementById("jur-tiles").innerHTML =
+      tile(J.snapshots, "roster snapshots") +
+      tile(fmtInt(e.eligible||0), "eligible trades") +
+      tile(fmtSign(J.diff_mean, 2), "in − out") +
+      tile(fmtNum(J.diff_t), `t (paired, ${J.paired_block_months||1}-month blocks)`) +
+      tile(J.paired_blocks ?? ": ", "independent blocks");
+    renderTable(document.getElementById("jur-table"), [
+      {key:"group",label:"group"},
+      {key:"n",label:"n",num:1,fmt:fmtInt},
+      {key:"mean",label:"mean",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"hit",label:"hit%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"t",label:"t",num:1,fmt:v=>fmtNum(v)},
+      {key:"blocks",label:"blocks",num:1},
+    ], [
+      {group:"in jurisdiction", ...J.in_jurisdiction},
+      {group:"out of jurisdiction", ...J.out_of_jurisdiction},
+    ]);
+    setNote("jur-note", `<b>${J.verdict}</b><br>
+       ${fmtInt(e.eligible||0)} of ${fmtInt(e.total_priced_buys||0)} priced buys are
+       eligible: a trade needs both a mapped sector (${fmtInt(J.sectors_mapped)} tickers
+       mapped) and a filer on a committee at that date.
+       The paired t clusters on ${J.paired_block_months||1}-month non-overlapping blocks
+       (${J.paired_blocks} of them), not calendar months: at a ${J.horizon}-day horizon
+       consecutive months share most of their holding window, and the older
+       monthly-paired figure (t=${fmtNum(J.diff_t_month)} over ${J.paired_months} months)
+       treats them as independent draws.
+       The committee→sector map is hand-authored judgement, deliberately conservative;
+       Appropriations and Budget are excluded because their remit spans the whole
+       economy and would mark nearly every trade in-jurisdiction.`);
+  } else if (A.jurisdiction && A.jurisdiction.error) {
+    setNote("jur-note", `<span class="note">${A.jurisdiction.error}</span>`);
+  } else { need("jur-table"); }
+
+  /* ---- persistence ---- */
+  if (A.persistence && !A.persistence.error) {
+    const p = A.persistence;
+    document.getElementById("pers-tiles").innerHTML =
+      tile(fmtNum(p.mean_spearman,3), "mean Spearman ρ") +
+      tile(fmtNum(p.t_spearman), "t (ρ)") +
+      tile(fmtSign(p.mean_spread,2), "mean tercile spread") +
+      tile(fmtNum(p.t_spread), "t (spread)") +
+      tile(`${p.pairs_positive}/${p.pairs}`, "pairs positive");
+    barChart(document.getElementById("pers-chart"), document.getElementById("pers-tip"),
+      p.detail.map(d => d.train+"→"+d.test),
+      [{name:"tercile spread (top − bottom)", y: p.detail.map(d=>d.spread), color: css("--s1")}],
+      {yfmt:v=>(v*100).toFixed(0)+"%"});
+    renderTable(document.getElementById("pers-table"), [
+      {key:"train",label:"train"}, {key:"test",label:"test"},
+      {key:"filers",label:"filers",num:1},
+      {key:"spearman",label:"ρ",num:1,fmt:v=>fmtNum(v,3),cls},
+      {key:"p_spearman",label:"p(ρ)",num:1,fmt:v=>fmtNum(v,3)},
+      {key:"top_tercile",label:"top",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"bottom_tercile",label:"bottom",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"spread",label:"spread",num:1,fmt:v=>fmtSign(v,2),cls},
+    ], p.detail);
+    setNote("pers-note", `<b>${p.verdict}</b><br>Filers are ranked on a TRAIN window and
+       measured on the NEXT one, so the test is strictly out-of-sample. A null here is
+       actionable: it means stop hunting for whom to copy. Sign test p=${fmtNum(p.sign_p,3)}.`);
+  } else { need("pers-table"); }
+
+  /* ---- exits ---- */
+  if (A.exits && !A.exits.error) {
+    renderTable(document.getElementById("exit-table"), [
+      {key:"rule",label:"rule"},
+      {key:"n",label:"n",num:1,fmt:fmtInt},
+      {key:"mean",label:"mean",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"hit",label:"hit%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"mean_hold",label:"hold",num:1,fmt:v=>fmtNum(v,0)},
+      {key:"t_own",label:"t",num:1,fmt:v=>fmtNum(v)},
+      {key:"vs_base",label:"vs baseline",num:1,fmt:v=>v==null?", ":fmtSign(v,2),cls},
+      {key:"t_vs_base",label:"t (paired)",num:1,fmt:v=>fmtNum(v)},
+      {key:"q_fdr",label:"q(FDR)",num:1,fmt:v=>fmtNum(v,3)},
+    ], A.exits.rows);
+    setNote("exit-note", `Baseline = hold ${A.exits.baseline_h}d. <b>${A.exits.verdict}</b><br>
+       The column that matters is <code>vs baseline</code>, the PAIRED difference
+       on the same trades. A rule can look profitable purely by inheriting what
+       the baseline already had. Exits are simulated on excess-vs-benchmark paths,
+       so “trail” means giving back that much relative to the benchmark, not a
+       broker stop order.`);
+  } else { need("exit-table"); }
+
+  /* ---- leverage ---- */
+  if (A.leverage && !A.leverage.error) {
+    const L = A.leverage;
+    seg(document.getElementById("lev-seg"), L.candidates.map(c => [c.name, c.name]), name => {
+      const c = L.candidates.find(x => x.name === name);
+      if (!c) return;
+      renderTable(document.getElementById("lev-table"), [
+        {key:"leverage",label:"L",num:1,fmt:v=>v.toFixed(2)+"x"},
+        {key:"realised_total_return",label:"realised ret",num:1,fmt:v=>fmtSign(v,0),cls},
+        {key:"realised_max_dd",label:"realised DD",num:1,fmt:v=>fmtPct(v,1)},
+        {key:"boot_median_return",label:"boot median",num:1,fmt:v=>fmtSign(v,0),cls},
+        {key:"boot_p05_return",label:"boot p05",num:1,fmt:v=>fmtSign(v,0),cls},
+        {key:"boot_median_max_dd",label:"median DD",num:1,fmt:v=>fmtPct(v,1)},
+        {key:"boot_worst_max_dd",label:"worst DD",num:1,fmt:v=>fmtPct(v,1)},
+        {key:"margin_call_prob",label:"P(call)",num:1,
+         fmt:v=>`<span class="${v>0.05?'neg':''}">${fmtPct(v,1)}</span>`},
+        {key:"realised_liquidated",label:"",fmt:v=>v?'<span class="neg">LIQUIDATED</span>':""},
+      ], c.rows);
+      const sens = Object.entries(c.sensitivity||{}).map(([k,v]) => `${k}→${v.toFixed(2)}x`).join("  ");
+      setNote("lev-note",
+        `Max leverage with P(margin call) ≤ 5%: <b>${c.max_safe.toFixed(2)}x</b>
+         at ${fmtPct(L.maintenance,0)} maintenance, ${fmtPct(L.financing,1)} financing,
+         ${L.paths} bootstrap paths.<br>
+         Maintenance sensitivity: ${sens}<br>${L.verdict}<br>
+         <span class="neg">Rows marked LIQUIDATED were force-closed, equity freezes
+         there, so their realised drawdown understates the actual ruin.</span><br>
+         Not modelled (all make real leverage worse): ${L.caveats.join("; ")}.`);
+    });
+    const pal = PAL();
+    scatterChart(document.getElementById("lev-chart"), document.getElementById("lev-tip"),
+      L.candidates.map((c,i) => ({
+        name: c.name, color: pal[i % pal.length],
+        points: c.rows.map(r => ({x: r.margin_call_prob, y: r.boot_median_return,
+                                  p05: r.boot_p05_return, lev: r.leverage,
+                                  liquidated: r.realised_liquidated})),
+      })), {vline: 0.05, xfmt: v=>(v*100).toFixed(0)+"%", yfmt: v=>(v*100).toFixed(0)+"%"});
+  } else { need("lev-table"); }
+
+  /* ---- broker costs ---- */
+  if (A.costs && !A.costs.error) {
+    renderTable(document.getElementById("cost-table"), [
+      {key:"cost_model",label:"cost model",
+       fmt:(v,r)=>v + (r.is_default?' <span class="pill copyable">default</span>':"")},
+      {key:"roundtrip_bps",label:"round trip",num:1,fmt:v=>fmtNum(v,0)+"bps"},
+      {key:"fx_bps_per_side",label:"FX/side",num:1,fmt:v=>fmtNum(v,0)+"bps"},
+      {key:"spread_bps_per_side",label:"spread/side",num:1,fmt:v=>fmtNum(v,0)+"bps"},
+      {key:"mean_gross",label:"gross excess",num:1,fmt:v=>fmtSign(v,3),cls},
+      {key:"mean_net",label:"net excess",num:1,fmt:v=>fmtSign(v,3),cls},
+      {key:"t_net",label:"t (blocks)",num:1,fmt:v=>fmtNum(v)},
+      {key:"n",label:"n",num:1,fmt:fmtInt},
+    ], A.costs.rows);
+    setNote("cost-note", `<b>${A.costs.verdict}</b><br>
+      Same trades, same horizon (${A.costs.horizon}d), repriced under each broker's
+      schedule. The gross column is identical by construction, the cost model only
+      ever subtracts: which is exactly why it is shown: it isolates how much of the
+      verdict is the platform rather than the signal.`);
+  } else { need("cost-table"); }
+
+  /* ---- walk-forward ---- */
+  if (A.walkforward && !A.walkforward.error) {
+    const W = A.walkforward, names = Object.keys(W.series), pal = PAL();
+    if (names.length) {
+      const base = W.series[names[0]].dates;
+      const series = names.map((n,i) => {
+        const m = new Map(W.series[n].dates.map((dt,k) => [dt, W.series[n].values[k]]));
+        return {name:n, color: pal[i % pal.length], x: base, y: base.map(dt => m.get(dt) ?? null)};
+      });
+      document.getElementById("eq-legend").innerHTML = series.map(s =>
+        `<span style="--c:${s.color}">${s.name}</span>`).join("");
+      lineChart(document.getElementById("eq-chart"), document.getElementById("eq-tip"),
+        series, {yfmt: v=>v.toFixed(2)+"x", tipfmt: v=>v.toFixed(3)+"x"});
+    }
+    const WF_HEAD = [
+      ["total_return","Total return","pct0"], ["cagr","CAGR","pct1"],
+      ["vol","Volatility","pct1"], ["max_drawdown","Max drawdown","pct1"],
+      ["sharpe","Sharpe","num2"], ["beta","Beta vs SPY","num2"],
+      ["alpha_annualized","Jensen alpha","pct1",1],
+      ["bootstrap_p","Bootstrap p vs SPY","num2"],
+    ];
+    const WF_ALL = WF_HEAD.concat([
+      ["sortino","Sortino","num2"], ["calmar","Calmar","num2"],
+      ["downside_dev","Downside deviation","pct1"],
+      ["info_ratio","Information ratio","num2",1],
+      ["tracking_error","Tracking error","pct1"],
+      ["r2","R² vs SPY","num2"], ["up_capture","Up capture","num2"],
+      ["down_capture","Down capture","num2"],
+      ["var95","Daily VaR 95%","pct2"], ["cvar95","Daily CVaR 95%","pct2"],
+      ["pct_positive_days","% up days","pct1"], ["days","Trading days","int"],
+    ]);
+    seg(document.getElementById("wf-depth-seg"),
+        [["head","headline"],["all","every metric"]],
+        v => matrixTable(document.getElementById("stats-table"),
+                         v==="head"?WF_HEAD:WF_ALL, W.rows));
+    const d = W.diagnostics || {}, cap = W.capacity || {};
+    if (cap.signals_available) {
+      document.getElementById("wf-capacity").innerHTML =
+        `<div class="tiles" style="margin-top:0">
+           ${tile(fmtInt(cap.signals_available), "priceable buy signals")}
+           ${tile(fmtInt(cap.signals_taken), "actually entered")}
+           ${tile(fmtPct(cap.signals_skipped_pct,0), "skipped, no cash")}
+           ${tile("~"+cap.max_concurrent_positions, `positions that fit at ${fmtPct(cap.max_weight,0)} each`)}
+           ${tile("~"+fmtInt(Math.round(cap.implied_concurrent_positions)), "needed to hold them all")}
+         </div>
+         <div class="note" style="color:var(--warn)">${cap.note}</div>`;
+    }
+    setNote("wf-note", `<b>${W.verdict}</b><br>
+      ${W.span[0]} → ${W.span[1]}, net of <code>${W.cost_model}</code>, ${W.horizon}d holds.
+      Filers are ranked only on trades whose outcome had resolved before each test
+      year began, so there is no look-ahead in selection either.
+      <b>Bootstrap p</b> is the one-sided probability that the strategy's mean daily
+      excess over SPY is ≤ 0, small means the outperformance is unlikely to be luck.
+      ${d.stale_exits?`<br><span class="neg">${fmtInt(d.stale_exits)} exits were priced off a
+      forward-filled close (no real print that day), survivorship optimism, counted not hidden.</span>`:""}`);
+  } else { need("stats-table"); }
+
+  /* ---- decay ---- */
+  if (A.decay && !A.decay.error) {
+    const D = A.decay, kinds = Object.keys(D.cohorts);
+    seg(document.getElementById("decay-seg"),
+        kinds.map(k => [k, `${k} (n=${fmtInt(D.cohorts[k].n)})`]), kind => {
+      const dd = D.cohorts[kind];
+      const x = dd.filing.map((_,i)=>i);
+      const s = [{name:"filing-anchored", color: css("--s2"), x, y: dd.filing}];
+      if (dd.transaction) s.unshift({name:"transaction-anchored", color: css("--s1"), x, y: dd.transaction});
+      lineChart(document.getElementById("decay-chart"), document.getElementById("decay-tip"),
+        s, {zeroline:true, yfmt: v=>(v*100).toFixed(1)+"%", tipfmt: v=>fmtSign(v)});
+      setNote("decay-note", `Mean cumulative excess return vs SPY in event time, GROSS of costs
+        the vertical gap between the curves is the alpha eaten by the disclosure lag.
+        ${dd.gap_at_horizon!=null?`At ${D.horizon}d that gap is <b>${fmtSign(dd.gap_at_horizon)}</b>.`:""}
+        <br>${D.note} <b>${D.verdict||""}</b>`);
+    });
+  } else { setNote("decay-note", "not built yet, run <code>python -m copytrade dashboard-build</code>"); }
+
+  /* ---- timeline ---- */
+  if (A.timeline && !A.timeline.error) {
+    const T = A.timeline;
+    barChart(document.getElementById("tl-chart"), document.getElementById("tl-tip"),
+      T.rows.map(r=>r.year),
+      [{name:"Copy ALL", y: T.rows.map(r=>r.copy_all), color: css("--s1")},
+       {name:"SPY", y: T.rows.map(r=>r.spy), color: css("--s4")},
+       {name:"excess", y: T.rows.map(r=>r.excess), color: css("--s3")}],
+      {yfmt:v=>(v*100).toFixed(0)+"%"});
+    const extra = Object.keys(T.rows[0]||{}).filter(k =>
+      !["year","copy_all","spy","excess"].includes(k));
+    renderTable(document.getElementById("tl-table"), [
+      {key:"year",label:"year"},
+      {key:"copy_all",label:"Copy ALL",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"spy",label:"SPY",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"excess",label:"excess",num:1,fmt:v=>`<b>${fmtSign(v,1)}</b>`,cls},
+      ...extra.map(k => ({key:k, label:k.toUpperCase(), num:1, fmt:v=>fmtSign(v,1), cls})),
+    ], T.rows);
+    setNote("tl-note", `<b>${T.verdict}</b>`);
+  } else { need("tl-table"); }
+
+  /* ---- disclosure lag ---- */
+  if (A.lag && !A.lag.error) {
+    const L = A.lag;
+    document.getElementById("lag-tiles").innerHTML =
+      tile(fmtInt(L.n), "trades with both dates") +
+      tile(L.median_days.toFixed(0)+"d", "median disclosure lag") +
+      tile(fmtPct(L.pct_within_45d,0), "inside the 45-day cap");
+    barChart(document.getElementById("lag-chart"), document.getElementById("lag-tip"),
+      L.histogram.map(h=>h.bucket),
+      [{name:"filings", y: L.histogram.map(h=>h.n), color: css("--s1")}],
+      {yfmt:v=>v.toFixed(0), tipfmt:v=>fmtInt(v)});
+    renderTable(document.getElementById("lag-source"), [
+      {key:"source",label:"source"}, {key:"n",label:"n",num:1,fmt:fmtInt},
+      {key:"median_days",label:"median",num:1}, {key:"p90_days",label:"p90",num:1},
+      {key:"pct_le_2d",label:"≤2d",num:1,fmt:v=>fmtPct(v,1)},
+      {key:"pct_le_45d",label:"≤45d",num:1,fmt:v=>fmtPct(v,1)},
+    ], L.by_source);
+    renderTable(document.getElementById("lag-stat"), [
+      {key:"channel",label:"channel"}, {key:"limit",label:"statutory limit"},
+      {key:"note",label:""},
+    ], L.statutory);
+    renderTable(document.getElementById("lag-fast"), [
+      {key:"filer_name",label:"filer"}, {key:"n",label:"filings",num:1,fmt:fmtInt},
+      {key:"median_lag",label:"median lag (days)",num:1},
+    ], L.fastest);
+    setNote("lag-note", `<b>${L.verdict}</b><br>The lag histogram counts calendar days from
+      transaction to filing. Trades whose transaction date failed validation are excluded
+      here: see Data integrity.`);
+  } else { need("lag-source"); }
+
+  /* ---- sectors ---- */
+  if (A.areas && !A.areas.error) {
+    const S = A.areas;
+    barChart(document.getElementById("area-chart"), document.getElementById("area-tip"),
+      S.sectors.map(s=>s.sector),
+      [{name:`mean net ${S.horizon}d excess`, y: S.sectors.map(s=>s.mean_ret), color: css("--s1")}],
+      {yfmt:v=>(v*100).toFixed(1)+"%", rotate:true});
+    renderTable(document.getElementById("area-table"), [
+      {key:"sector",label:"sector"},
+      {key:"n_buys",label:"buys",num:1,fmt:fmtInt},
+      {key:"n_filers",label:"filers",num:1},
+      {key:"n_tickers",label:"tickers",num:1},
+      {key:"win_rate",label:"win%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"mean_ret",label:"mean",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median_ret",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+    ], S.sectors);
+    seg(document.getElementById("area-seg"),
+        [["best","best names"],["worst","worst names"],["most_traded","most crowded"]], which => {
+      renderTable(document.getElementById("area-names"), [
+        {key:"ticker",label:"ticker"},
+        {key:"n_buys",label:"buys",num:1,fmt:fmtInt},
+        {key:"n_filers",label:"filers",num:1},
+        {key:"win_rate",label:"win%",num:1,fmt:v=>fmtPct(v,0)},
+        {key:"mean_ret",label:"mean",num:1,fmt:v=>fmtSign(v,2),cls},
+      ], S[which] || []);
+    });
+    setNote("area-note", `<b>${S.verdict}</b>`);
+  } else { need("area-table"); }
+
+  /* ---- ranking ---- */
+  if (A.ranking && !A.ranking.error) {
+    const R = A.ranking, alphaKey = "lag_alpha_" + R.horizon + "d";
+    renderTable(document.getElementById("rank-table"), [
+      {key:"filer",label:"filer"}, {key:"kind",label:"kind"},
+      {key:"party",label:"party",fmt:v => v ? v[0] : ", "},
+      {key:"n_trades",label:"trades",num:1,fmt:fmtInt},
+      {key:alphaKey,label:"lag alpha "+R.horizon+"d",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"alpha_lost_to_lag",label:"lost to lag",num:1,fmt:v=>fmtSign(v,2)},
+      {key:"tstat",label:"t",num:1,fmt:v=>fmtNum(v)},
+      {key:"hit_rate",label:"hit",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"median_lag_days",label:"lag (bd)",num:1},
+      {key:"turnover_class",label:"turnover"},
+      {key:"routine",label:"routine",fmt:v => v ? '<span class="pill">routine</span>' : ", "},
+      {key:"copyable",label:"copyable",fmt:v => v ?
+        '<span class="pill copyable">copyable</span>' : '<span class="pill">, </span>'},
+    ], R.rows);
+    setNote("rank-note", `<b>${R.verdict}</b>`);
+  } else { need("rank-table"); }
+
+  /* ---- track records ---- */
+  if (A.profits && !A.profits.error) {
+    const P = A.profits;
+    const COLS = [
+      {key:"filer",label:"filer"}, {key:"kind",label:"kind"},
+      {key:"n_buys_priced",label:"picks",num:1,fmt:fmtInt},
+      {key:"n_closed",label:"closed",num:1,fmt:fmtInt},
+      {key:"win_rate",label:"win%",num:1,fmt:v=>fmtPct(v,0)},
+      {key:"mean_return",label:"mean/pick",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"median_return",label:"median",num:1,fmt:v=>fmtSign(v,2),cls},
+      {key:"total_pnl_per_10k",label:"$ per $10k/pick",num:1,
+       fmt:v=>v==null?": ":(v>=0?"+$":"−$")+Math.abs(Math.round(v)).toLocaleString(),cls},
+      {key:"annualized_per_pick",label:"ann./pick",num:1,fmt:v=>fmtSign(v,1),cls},
+      {key:"avg_holding_days",label:"hold (d)",num:1,fmt:v=>fmtNum(v,0)},
+      {key:"confidence",label:"confidence",
+       fmt:v=>`<span class="pill ${v==='high'?'ok':v==='anecdotal'?'fail':''}">${v}</span>`},
+    ];
+    seg(document.getElementById("prof-seg"),
+        [["all","all filers"],["high","high confidence only (n≥30)"]], which => {
+      renderTable(document.getElementById("prof-table"), COLS,
+        which==="all" ? P.rows : P.rows.filter(r => r.confidence==="high"));
+    });
+    setNote("prof-note", `<b>${P.verdict}</b><br>Counts by confidence: `
+      + Object.entries(P.by_confidence).map(([k,v]) => `${k} ${v}`).join(" · ") + ".");
+  } else { need("prof-table"); }
+
+  /* ---- disclosed positions ---- */
+  if (A.holdings && !A.holdings.error) {
+    const H = A.holdings;
+    setNote("hold-caveat", H.caveat);
+    const money = v => v==null ? ", " :
+      (v<0?"−":"") + "$" + Math.abs(Math.round(v)).toLocaleString();
+    const VIEWS = {
+      crowded: [
+        {key:"ticker",label:"ticker"},
+        {key:"filers",label:"filers net-long",num:1},
+        {key:"buys",label:"buy disclosures",num:1,fmt:fmtInt},
+        {key:"net_low",label:"net (low)",num:1,fmt:money},
+        {key:"net_high",label:"net (high)",num:1,fmt:money},
+        {key:"last_disclosed",label:"last disclosed"},
+      ],
+      summary: [
+        {key:"filer",label:"filer"},
+        {key:"tickers",label:"tickers",num:1},
+        {key:"disclosures",label:"buys",num:1,fmt:fmtInt},
+        {key:"sells",label:"sells",num:1,fmt:fmtInt},
+        {key:"net_low",label:"net (low)",num:1,fmt:money},
+        {key:"net_high",label:"net (high)",num:1,fmt:money},
+        {key:"last_disclosed",label:"last disclosed"},
+      ],
+      positions: [
+        {key:"filer",label:"filer"},
+        {key:"ticker",label:"ticker"},
+        {key:"n_buys",label:"buys",num:1},
+        {key:"n_sells",label:"sells",num:1},
+        {key:"net_low",label:"net (low)",num:1,fmt:money},
+        {key:"net_high",label:"net (high)",num:1,fmt:money},
+        {key:"status",label:"status",
+         fmt:v=>`<span class="pill ${/net buyer|accumulating/.test(v)?'ok':/net seller|reducing/.test(v)?'fail':''}">${v}</span>`},
+        {key:"last_disclosed",label:"last"},
+      ],
+    };
+    seg(document.getElementById("hold-seg"),
+        [["crowded","most crowded names"],["summary","most active filers"],
+         ["positions","every position"]],
+        v => renderTable(document.getElementById("hold-table"), VIEWS[v],
+                         v==="crowded" ? H.crowded : v==="summary" ? H.summary : H.positions));
+    setNote("hold-note", `<b>${H.verdict}</b><br>
+      Status counts: ` + Object.entries(H.status_counts||{})
+        .map(([k,v]) => `${k} ${fmtInt(v)}`).join(" · ") + `.<br>
+      Consumer trackers render this same data as a “portfolio”. It is not one
+      the bands above are what the disclosures can actually support.`);
+  } else { need("hold-table"); }
+
+  /* ---- sleeves ---- */
+  if (A.allocation && !A.allocation.error) {
+    const AL = A.allocation;
+    renderTable(document.getElementById("alloc-table"), [
+      {key:"filer",label:"filer"},
+      {key:"sleeve",label:"sleeve",fmt:v => `<span class="pill ${v==='tfsa'?'copyable':''}">${v}</span>`},
+      {key:"weight_cad",label:"weight (CAD)",num:1,
+       fmt:v => v==null ? ", " : "$"+Math.round(v).toLocaleString()},
+      {key:"trades_per_year",label:"filings/yr",num:1,fmt:v=>fmtNum(v,0)},
+      {key:"turnover_class",label:"turnover"},
+      {key:"reason",label:"reason"},
+    ], AL.assignments);
+    setNote("alloc-notes", `<b>${AL.verdict}</b><br>` + (AL.notes||[]).map(n => "• "+n).join("<br>"));
+  } else { need("alloc-table"); }
+
+  /* ---- data health ---- */
+  if (A.health && !A.health.error) {
+    const h = A.health;
+    document.getElementById("health-age").textContent =
+      (h.verdict === "ok" ? "ok" : "degraded") + stale(h.built_at);
+    document.getElementById("health-summary").innerHTML =
+      `<div class="tiles" style="margin-top:0">
+        ${tile(fmtInt(h.trades), "trades")}
+        ${tile(fmtInt(h.filers), "filers")}
+        ${tile(fmtInt(h.priced_tickers)+" / "+fmtInt(h.traded_tickers), "tickers priced")}
+        ${tile(fmtPct(h.coverage,0), "price coverage")}
+        ${tile(fmtInt(h.price_rows), "price rows")}
+        ${tile((h.fx.last||": "), "FX through")}
+      </div>` +
+      (h.notes.length ? `<div class="note" style="color:var(--bad)">` +
+        h.notes.map(n => "• "+n).join("<br>") + `</div>` : "");
+    // Quantify the survivorship caveat instead of gesturing at it. The count
+    // moved sharply when the 2015-2018 sample was recovered, those trades are
+    // in names that have since been acquired or renamed, which no free price
+    // provider serves: so a fixed sentence would understate it.
+    if (h.missing_prices != null) {
+      setNote("cav-unpriced",
+        `Unpriceable/delisted tickers are excluded and <b>counted</b>: ` +
+        `<b>${fmtInt(h.missing_prices)}</b> of ${fmtInt(h.traded_tickers)} traded ` +
+        `tickers have no price series (${fmtPct(1 - h.coverage, 1)} of the universe). ` +
+        `Results are upward-biased to the extent losers delist, and this bucket ` +
+        `grows as older trades are recovered, because the names in them are the ` +
+        `ones that have since been acquired or renamed.`);
+    }
+    renderTable(document.getElementById("health-sources"), [
+      {key:"source",label:"source"},
+      {key:"trades",label:"trades",num:1,fmt:fmtInt},
+      {key:"first",label:"first"}, {key:"last",label:"last"},
+    ], h.sources);
+    const bad = (h.benchmarks||[]).filter(b => !b.ok).map(b => b.ticker);
+    setNote("health-bench", bad.length
+      ? `<span class="neg">Missing benchmark prices: ${bad.join(", ")}, every
+         scorecard row using them is invalid.</span>`
+      : `All benchmarks priced (${(h.benchmarks||[]).map(b=>b.ticker).join(", ")}).`);
+  } else { need("health-sources"); }
+
+  /* ---- data integrity ---- */
+  if (A.quality && !A.quality.error) {
+    const Q = A.quality;
+    document.getElementById("quality-age").textContent =
+      (Q.n_failed === 0 ? "all pass" : `${Q.n_failed} FAILING`) + stale(Q.built_at);
+    document.getElementById("quality-age").className =
+      "badge" + (Q.n_failed ? " bad" : "");
+    renderTable(document.getElementById("qual-table"), [
+      {key:"ok",label:"",fmt:v=>v?'<span class="pill ok">pass</span>':'<span class="pill fail">FAIL</span>'},
+      {key:"check",label:"check"},
+      {key:"value",label:"count",num:1,fmt:fmtInt},
+      {key:"detail",label:"why it matters"},
+    ], Q.checks);
+    renderTable(document.getElementById("qual-quar"), [
+      {key:"ticker",label:"ticker"},
+      {key:"reason",label:"screen that fired",fmt:v=>`<span class="pill fail">${v}</span>`},
+      {key:"min",label:"min",num:1,fmt:v=>v==null?", ":Number(v).toExponential(2)},
+      {key:"max",label:"max",num:1,fmt:v=>v==null?", ":Number(v).toExponential(2)},
+      {key:"range_ratio",label:"range",num:1,fmt:v=>v==null?", ":Number(v).toExponential(1)+"x"},
+      {key:"sessions_over_100pct",label:">100% days",num:1,fmt:v=>v==null?", ":fmtInt(v)},
+    ], Q.quarantine || []);
+    setNote("qual-quar-note",
+      `${(Q.quarantine||[]).length} ticker(s) excluded, affecting
+       ${fmtInt(Q.quarantine_trades||0)} trades, those fall into the existing
+       “unpriceable” bucket that every report already counts. Rows are NOT deleted:
+       <code>prices</code> is re-populated from providers, so a delete would be undone
+       by the next refresh and would destroy the evidence that the provider is wrong.
+       Genuine violent sessions survive on purpose (DJT +357%, GME +135%), every
+       screen pairs a move test with a range test, because one violent day is a
+       market and five is a data feed. Re-run with
+       <code>python -m copytrade prices-qa</code>.`);
+    renderTable(document.getElementById("qual-review"), [
+      {key:"ticker",label:"ticker"},
+      {key:"range_ratio",label:"range",num:1,fmt:v=>fmtNum(v,0)+"x"},
+      {key:"min",label:"min",num:1,fmt:v=>fmtNum(v,3)},
+      {key:"max",label:"max",num:1,fmt:v=>fmtNum(v,1)},
+      {key:"max_session_move",label:"biggest day",num:1,fmt:v=>fmtSign(v,0)},
+      {key:"n",label:"days",num:1,fmt:fmtInt},
+    ], Q.review || []);
+    const c = Q.coverage || {};
+    document.getElementById("qual-tiles").innerHTML =
+      tile(fmtInt(c.sectors_mapped), "tickers with a sector") +
+      tile(fmtPct(c.sector_coverage,0), "sector coverage") +
+      tile(fmtInt(c.sector_lookups_exhausted), "lookups given up on") +
+      tile(fmtInt(c.sector_lookups_throttled), "lookups throttled");
+    setNote("qual-note", `<b>${Q.verdict}</b><br>
+      Sector coverage is a POWER limit, not a correctness bug: an unmapped ticker is
+      excluded from the jurisdiction and sector tests, which shrinks those samples
+      without biasing them. A non-zero “throttled” count means the provider was rate
+      limiting, NOT that the remaining tickers are unclassifiable, re-run
+      <code>sectors-refresh</code> later.`);
+  } else { need("qual-table"); }
+
+  /* ---- recent filings ---- */
+  try {
+    const tr = await j("/api/trades/recent?limit=50");
+    renderTable(document.getElementById("trades-table"), [
+      {key:"filing_datetime",label:"filed"},
+      {key:"filer",label:"filer"}, {key:"kind",label:"kind"},
+      {key:"side",label:"side",fmt:v=>v?`<span class="${v==='buy'?'pos':'neg'}">${v}</span>`:", "},
+      {key:"ticker",label:"ticker"},
+      {key:"transaction_date",label:"transacted",fmt:v=>v||'<span class="note">invalid, nulled</span>'},
+      {key:"amount_low",label:"amount",num:1,fmt:(v,r) => v==null?", ":
+        "$"+Math.round(v).toLocaleString()+(r.amount_high&&r.amount_high!==v?", $"+Math.round(r.amount_high).toLocaleString():"")},
+      {key:"source",label:"source"},
+    ], tr);
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+})().catch(e => {
+  document.getElementById("err").textContent = e.message +
+    "\n\nIf no panels are built: python -m copytrade dashboard-build" +
+    "\nIf the DB is empty:      python -m copytrade demo";
+});
+
+/* Highlight the nav entry for whichever section is in view.
+   A scroll listener rather than IntersectionObserver: the mixed px/% rootMargin
+   an IO needs here ("-60px 0px -75% 0px") produced a band that never matched a
+   22px heading, so nothing ever lit up. Picking the last heading above a fixed
+   offset is both simpler and exactly the intent. */
+(function tocSpy(){
+  const links = [...document.querySelectorAll("nav.toc a")];
+  // Sorted by DOCUMENT position, not nav position, the nav is grouped, so its
+  // order does not follow the page, and "last heading above the line" is only
+  // meaningful in document order.
+  const pairs = links
+    .map(a => [a, document.getElementById(a.hash.slice(1))])
+    .filter(([, el]) => el)
+    .sort((x, y) => x[1].offsetTop - y[1].offsetTop);
+  if (!pairs.length) return;
+  const update = () => {
+    const line = 80;
+    let active = pairs[0][0];
+    for (const [a, el] of pairs) {
+      if (el.getBoundingClientRect().top <= line) active = a;
+    }
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 2) {
+      active = pairs[pairs.length - 1][0];
+    }
+    links.forEach(l => l.classList.toggle("on", l === active));
+  };
+  // Called directly rather than throttled through requestAnimationFrame: the
+  // work is a couple of dozen getBoundingClientRect reads, and rAF does not
+  // fire at all when the page is not compositing frames (a background tab, or
+  // an embedded pane), which would leave the highlight stuck on section one.
+  addEventListener("scroll", update, {passive: true});
+  addEventListener("resize", update, {passive: true});
+  update();
+})();
+</script>
+</body>
+</html>

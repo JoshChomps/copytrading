@@ -1,0 +1,41 @@
+{
+  "symbol": "AAPL",
+  "data": [
+    {
+      "amountFrom": 15001,
+      "amountTo": 50000,
+      "assetName": "Apple Inc",
+      "filingDate": "2023-03-15",
+      "name": "Jane Placeholder",
+      "ownerType": "Self",
+      "position": "House",
+      "symbol": "AAPL",
+      "transactionDate": "2023-02-10",
+      "transactionType": "Purchase"
+    },
+    {
+      "amountFrom": 1001,
+      "amountTo": 15000,
+      "assetName": "Apple Inc",
+      "filingDate": "",
+      "name": "Missing Filingdate",
+      "ownerType": "Spouse",
+      "position": "Senate",
+      "symbol": "AAPL",
+      "transactionDate": "2023-02-11",
+      "transactionType": "Purchase"
+    },
+    {
+      "amountFrom": 50001,
+      "amountTo": 100000,
+      "assetName": "Apple Inc Call Options",
+      "filingDate": "2023-04-02",
+      "name": "Opt Ion",
+      "ownerType": "Self",
+      "position": "House",
+      "symbol": "AAPL",
+      "transactionDate": "2023-03-01",
+      "transactionType": "Sale (Full)"
+    }
+  ]
+}

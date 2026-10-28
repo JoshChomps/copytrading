@@ -1,0 +1,21 @@
+# local env / venv
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# generated data & reports (reproducible from public data)
+data/
+reports/*
+reports_demo/
+!reports/.gitkeep
+
+# Local-only files: AI tool configs, interview notes, secrets, editor locks
+CLAUDE.md
+AGENTS.md
+.claude/
+PROF_QA.md
+HANDOFF*.md
+.env
+*.lck

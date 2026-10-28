@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Latest Filings - Form 4</title>
+  <entry>
+    <title>4 - DOE JANE (0001214128) (Reporting)</title>
+    <link rel="alternate" type="text/html" href="https://www.sec.gov/Archives/edgar/data/1214128/0001214128-24-000123-index.htm"/>
+    <updated>2024-05-01T16:35:12-04:00</updated>
+  </entry>
+  <entry>
+    <title>4 - SMITH JOHN (0000777777) (Reporting)</title>
+    <link rel="alternate" type="text/html" href="https://www.sec.gov/Archives/edgar/data/777777/0000777777-24-000456-index.htm"/>
+    <updated>2024-05-01T16:20:01-04:00</updated>
+  </entry>
+  <entry>
+    <title>4 - SMITH JOHN (0000777777) (Reporting) duplicate accession</title>
+    <link rel="alternate" type="text/html" href="https://www.sec.gov/Archives/edgar/data/777777/0000777777-24-000456-index.htm"/>
+    <updated>2024-05-01T16:20:01-04:00</updated>
+  </entry>
+</feed>

@@ -1,0 +1,32 @@
+# Tickers polled against symbol-keyed congress aggregators (one per line).
+# Congress trading concentrates in mega caps; extend freely.
+AAPL
+MSFT
+NVDA
+AMZN
+GOOGL
+META
+TSLA
+AVGO
+BRK-B
+JPM
+V
+UNH
+XOM
+LLY
+JNJ
+PG
+MA
+HD
+COST
+ABBV
+CRM
+NFLX
+AMD
+BA
+DIS
+GS
+CAT
+GE
+INTC
+MU

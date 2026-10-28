@@ -1,0 +1,56 @@
+# SEC Schedule 13D activist stakes, event-driven channel.
+# Separate workflow (like insiders): 13D targets span the whole market, so it
+# uses its own cache namespace (copytrade-activism-data-) that the main
+# backtest never restores. Trigger: push with "[activism]" or dispatch.
+
+name: activism-backtest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/copy-trading-backtest-1ba32a"]
+
+permissions:
+  contents: read
+
+jobs:
+  activism:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[activism]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      COPYTRADE_TIINGO_API_KEY: ${{ secrets.COPYTRADE_TIINGO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: copytrade-activism-data-${{ github.run_id }}
+          restore-keys: |
+            copytrade-activism-data-
+            copytrade-data-
+      - name: Prepare dirs
+        run: mkdir -p reports data
+      - name: Backfill SEC 13D activist stakes (2021-2025)
+        run: python -m copytrade backfill-13d --years 2021,2022,2023,2024,2025
+      - name: 13D activist event study (multi-horizon vs SPY)
+        run: python -m copytrade activism | tee reports/activism.txt
+      - name: Echo activism table at job end (log-tail reach)
+        if: always()
+        run: cat reports/activism.txt 2>/dev/null || echo "(activism.txt missing)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: activism-reports
+          path: reports/
+          if-no-files-found: warn
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data
+          key: copytrade-activism-data-${{ github.run_id }}

@@ -1,0 +1,113 @@
+- name:
+    first: Pat
+    last: Roberts
+    official_full: Pat Roberts
+  terms:
+  - type: sen
+    start: '2015-01-06'
+    end: '2021-01-03'
+    state: KS
+    class: 2
+    party: Republican
+    url: https://www.roberts.senate.gov
+    address: 109 Hart Senate Office Building Washington DC 20510
+    phone: 202-224-4774
+    fax: 202-224-3514
+    contact_form: https://www.roberts.senate.gov/public/?p=EmailPat
+    office: 109 Hart Senate Office Building
+    state_rank: senior
+    rss_url: http://www.roberts.senate.gov/public/?a=rss.feed
+- name:
+    first: David
+    last: Perdue
+    official_full: David Perdue
+  terms:
+  - type: sen
+    start: '2015-01-06'
+    end: '2021-01-03'
+    state: GA
+    class: 2
+    state_rank: senior
+    party: Republican
+    url: https://www.perdue.senate.gov
+    address: 455 Russell Senate Office Building Washington DC 20510
+    office: 455 Russell Senate Office Building
+    phone: 202-224-3521
+    contact_form: https://www.perdue.senate.gov/connect/email
+- name:
+    first: James
+    middle: M.
+    last: Inhofe
+    nickname: Jim
+    official_full: James M. Inhofe
+  terms:
+  - type: sen
+    start: '2021-01-03'
+    end: '2023-01-03'
+    state: OK
+    class: 2
+    state_rank: senior
+    party: Republican
+    url: https://www.inhofe.senate.gov
+    rss_url: http://www.inhofe.senate.gov/rss/feeds/?type=all&amp;cachebuster=eea6c4d7%2d939c%2d5c1e%2db6c7aa3b8b291208
+    contact_form: https://www.inhofe.senate.gov/contact
+    address: 205 Russell Senate Office Building Washington DC 20510
+    office: 205 Russell Senate Office Building
+    phone: 202-224-4721
+- name:
+    first: Mitch
+    last: McConnell
+    official_full: Mitch McConnell
+  terms:
+  - type: sen
+    start: '2021-01-03'
+    end: '2027-01-03'
+    state: KY
+    class: 2
+    state_rank: senior
+    party: Republican
+    url: https://www.mcconnell.senate.gov
+    rss_url: http://www.mcconnell.senate.gov/public/?a=rss.feed
+    contact_form: https://www.mcconnell.senate.gov/public/index.cfm?p=contact
+    address: 317 Russell Senate Office Building Washington DC 20510
+    office: 317 Russell Senate Office Building
+    phone: 202-224-2541
+- name:
+    first: Ron
+    last: Wyden
+    official_full: Ron Wyden
+  terms:
+  - type: sen
+    start: '2023-01-03'
+    end: '2029-01-03'
+    state: OR
+    class: 3
+    state_rank: senior
+    party: Democrat
+    url: https://www.wyden.senate.gov
+    rss_url: http://www.wyden.senate.gov/rss/feeds/?type=all&amp;
+    contact_form: https://www.wyden.senate.gov/contact/
+    address: 221 Dirksen Senate Office Building Washington DC 20510
+    office: 221 Dirksen Senate Office Building
+    phone: 202-224-5244
+- name:
+    first: Angus
+    middle: S.
+    last: King
+    suffix: Jr.
+    official_full: Angus S. King, Jr.
+  terms:
+  - type: sen
+    start: '2025-01-03'
+    end: '2031-01-03'
+    state: ME
+    class: 1
+    state_rank: junior
+    party: Independent
+    caucus: Democrat
+    url: https://www.king.senate.gov
+    rss_url: http://www.king.senate.gov/rss/feeds/?type=all
+    contact_form: https://www.king.senate.gov/contact
+    address: 133 Hart Senate Office Building Washington DC 20510
+    office: 133 Hart Senate Office Building
+    phone: 202-224-5344

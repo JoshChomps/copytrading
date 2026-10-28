@@ -1,0 +1,44 @@
+# CopyTrade project defaults. Env vars (COPYTRADE_*) override these; API keys
+# belong in .env, never here.
+
+[storage]
+db_path = "data/copytrade.db"
+raw_dir = "data/raw"
+reports_dir = "reports"
+
+[edgar]
+# SEC fair access: UA must contain a contact email; keep rps <= 8
+edgar_user_agent = "copytrade-research you@example.com"
+edgar_rps = 8.0
+
+[execution]
+# zero | default10bps | alpaca | ibkr_ca | questrade | questrade_gambit | wealthsimple
+cost_model = "ibkr_ca"
+display_tz = "America/Vancouver"  # reporting; market cutoffs below stay ET (15:30 ET = 12:30 PT)
+trade_notional = 10000.0
+max_weight = 0.05
+same_day_close = false
+same_day_cutoff = "15:30"
+amount_basis = "mid"        # low | mid | high (congress dollar ranges)
+
+[research]
+horizon = 63
+horizons = [5, 21, 63, 126, 252]
+top_n = 10
+min_trades_rank = 30
+min_trades_walkforward = 5
+benchmark = "SPY"
+
+[polling]
+poll_form4_secs = 180
+poll_congress_secs = 3600
+congress_universe_file = "config/universe.txt"
+
+[scrape]
+# "auto" = every source whose prerequisites are met (keys/universe present).
+# Explicit example: ["edgar_form4", "house_clerk", "senate_efd", "finnhub_congress"]
+# See docs/SCRAPING.md for the source table and the Finnhub blind-spot note.
+scrape_sources = ["auto"]
+# Optional Canadian material-change feed (third-party tracker export URL).
+# Canada has no STOCK Act, this is a coarse supplement; see docs/SCRAPING.md.
+canada_ciec_json_url = ""
