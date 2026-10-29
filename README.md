@@ -222,8 +222,7 @@ and the live-data obstacle map live in [`docs/CANADA.md`](docs/CANADA.md).
 
 ## Keys & secrets (exact names)
 
-Local: put them in `.env`. GitHub Actions: repo → Settings → Secrets and
-variables → Actions → **New repository secret**, same names. Everything runs
+Put them in `.env`. Everything runs
 with zero keys; each one upgrades a capability.
 
 | secret name | tier | unlocks |
